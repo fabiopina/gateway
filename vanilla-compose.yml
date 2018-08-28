@@ -10,7 +10,7 @@ services:
     networks:
       - my-network
   zuul:
-    image: fabiopina151/fabiopina151/vanilla-gateway:latest
+    image: fabiopina151/vanilla-gateway:latest
     deploy:
       restart_policy:
         condition: on-failure
