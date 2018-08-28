@@ -1,0 +1,116 @@
+version: "3.3"
+services:
+  eureka:
+    image: fabiopina151/eureka-server:latest
+    deploy:
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8761:8761"
+    networks:
+      - my-network
+  zuul:
+    image: fabiopina151/fabiopina151/vanilla-gateway:latest
+    deploy:
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8080:8765"
+    environment:
+      - EUREKA=eureka:8761
+    networks:
+      - my-network
+  registry:
+    image: fabiopina151/service-registry:latest
+    deploy: 
+      mode: global
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.service.registry=true"
+    environment:
+      - EUREKA=eureka:8761
+      - HEARTBEATINTERVAL=30
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - my-network
+  ms-db:
+    image: mariadb
+    deploy: 
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+    environment:
+      - MYSQL_ROOT_PASSWORD=ribeiro
+    networks:
+      - my-network
+  users:
+    image: fabiopina151/users-ms:latest
+    deploy: 
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.registry.eureka=true"
+    environment:
+      - DATABASEADDRESS=ms-db:3306
+    networks:
+      - my-network
+  songs:
+    image: fabiopina151/songs-ms:latest
+    deploy: 
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.registry.eureka=true"
+    environment:
+      - DATABASEADDRESS=ms-db:3306
+    networks:
+      - my-network
+  playlists:
+    image: fabiopina151/playlists-ms:latest
+    deploy: 
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.registry.eureka=true"
+    environment:
+      - DATABASEADDRESS=ms-db:3306
+      - SONGSADDRESS=zuul:8765/music-songs
+    networks:
+      - my-network
+  auth:
+    image: fabiopina151/auth-ms:latest
+    deploy: 
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.registry.eureka=true"
+    environment:
+      - USERSADDRESS=zuul:8765/music-users
+    networks:
+      - my-network
+  aggr:
+    image: fabiopina151/aggr-ms:latest
+    deploy: 
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    labels:
+      - "pt.fabiopina.mma.registry.eureka=true"
+    environment:
+      - PLAYLISTSADDRESS=zuul:8765/music-playlists
+      - SONGSADDRESS=zuul:8765/music-songs
+    networks:
+      - my-network
+networks:
+  my-network:
+    external:
+      name: my-network
+
+
+
